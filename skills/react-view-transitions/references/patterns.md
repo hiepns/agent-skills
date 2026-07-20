@@ -132,29 +132,27 @@ Don't put a manual `viewTransitionName` on the root DOM node inside `<ViewTransi
 
 ## Sliding Indicator (tabs)
 
-One shared-name indicator rendered under the **committed** active tab morphs between positions on change (slide the group, disable old/new — see `css-recipes.md` → Sliding Indicator). Key it to committed `active` (bar sits where nav landed); `useOptimistic` drives the label instantly; use a distinct `indicatorName` per tab strip.
+One shared-name indicator rendered under the **active** tab morphs between positions on change (slide the group, disable old/new — see `css-recipes.md` → Sliding Indicator). Render it only under the active tab so exactly one element holds `indicatorName`; use a distinct `indicatorName` per tab strip. Trigger the state change inside `startTransition` so the move animates. Whatever owns `active` drives it — local state here, routing in Next (see `nextjs.md` → Routing-Driven Tabs).
 
 ```tsx
-'use client';
-import Link from 'next/link';
-import { useOptimistic, useTransition, ViewTransition } from 'react';
+import { useState, useTransition, ViewTransition } from 'react';
 
-export function Tabs({ tabs, active, indicatorName = 'tab-indicator' }) {
-  const [optimisticActive, setOptimisticActive] = useOptimistic(active);
+export function Tabs({ tabs, indicatorName = 'tab-indicator' }) {
+  const [active, setActive] = useState(tabs[0].value);
   const [, startTransition] = useTransition();
   return (
     <nav>
       {tabs.map(t => (
-        <Link key={t.value} href={t.href} scroll={false}
-          aria-current={optimisticActive === t.value ? 'page' : undefined}
-          onNavigate={() => startTransition(() => setOptimisticActive(t.value))}>
+        <button key={t.value} type="button"
+          aria-current={active === t.value ? 'page' : undefined}
+          onClick={() => startTransition(() => setActive(t.value))}>
           <span>{t.label}</span>
           {active === t.value && (
             <ViewTransition name={indicatorName} share="tab-underline">
               <span className="active-underline" aria-hidden />
             </ViewTransition>
           )}
-        </Link>
+        </button>
       ))}
     </nav>
   );
@@ -178,7 +176,9 @@ function AnimatedCollapse({ open, children }) {
 <AnimatedCollapse open={open}><SectionContent /></AnimatedCollapse>
 ```
 
-## Preserve State with Activity
+## Composing with Activity
+
+`Activity` is orthogonal to view transitions: it preserves the state of a hidden subtree, `ViewTransition` animates it. Compose them for an in-page show/hide (drawer, panel, tab body) that keeps its scroll/form state while it animates in and out:
 
 ```jsx
 <Activity mode={isVisible ? 'visible' : 'hidden'}>
@@ -187,6 +187,8 @@ function AnimatedCollapse({ open, children }) {
   </ViewTransition>
 </Activity>
 ```
+
+Only reach for Activity when there's state worth preserving — a stateless element (e.g. the sliding indicator above) gains nothing from it. In Next.js, layout-hosted chrome already persists across navigations without Activity (see `nextjs.md`).
 
 ## Exclude Elements with `useOptimistic`
 

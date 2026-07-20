@@ -36,7 +36,7 @@ When following `implementation.md`, apply these additions:
 
 A bare `<ViewTransition>` in layout works only if pages have **no** VTs of their own.
 
-**Layouts persist across navigations** — `enter`/`exit` only fire on initial mount, not on route changes. Don't use type-keyed maps in layouts.
+**Layouts persist across navigations** — `enter`/`exit` only fire on initial mount, not on route changes. Don't use type-keyed maps in layouts. Because layouts persist, chrome hosted in one (nav, sidebar, player) keeps its state across navigations for free — no `Activity` needed. Reserve `Activity` for in-page show/hide (see `patterns.md` → Composing with Activity).
 
 ---
 
@@ -92,6 +92,39 @@ function handleSort(sort: string) {
 ```
 
 List items wrapped in `<ViewTransition key={item.id}>` will animate reorder. This is the server-component alternative to the client-side `useDeferredValue` pattern in `patterns.md`.
+
+---
+
+## Routing-Driven Tabs
+
+The generalized sliding indicator (`patterns.md` → Sliding Indicator) driven by navigation instead of local state: tabs are `<Link>`s, `active` comes from the URL (a server prop), and `useOptimistic` slides the indicator instantly while the route commits. Key the mounted indicator to committed `active` so the bar lands where navigation actually settles.
+
+```tsx
+'use client';
+import Link from 'next/link';
+import { useOptimistic, useTransition, ViewTransition } from 'react';
+
+export function Tabs({ tabs, active, indicatorName = 'tab-indicator' }) {
+  const [optimisticActive, setOptimisticActive] = useOptimistic(active);
+  const [, startTransition] = useTransition();
+  return (
+    <nav>
+      {tabs.map(t => (
+        <Link key={t.value} href={t.href} scroll={false}
+          aria-current={optimisticActive === t.value ? 'page' : undefined}
+          onNavigate={() => startTransition(() => setOptimisticActive(t.value))}>
+          <span>{t.label}</span>
+          {active === t.value && (
+            <ViewTransition name={indicatorName} share="tab-underline">
+              <span className="active-underline" aria-hidden />
+            </ViewTransition>
+          )}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+```
 
 ---
 
