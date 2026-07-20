@@ -177,15 +177,23 @@ A shared-element morph needs **both** the source *and* the target named element 
 
 ```tsx
 // app/thing/[slug]/layout.tsx
-export default async function Layout({ children, params }: LayoutProps<'/thing/[slug]'>) {
+export default async function Layout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   return (
     <ViewTransition name={`thing-${slug}`} share="morph" default="none">
-      <article>{children}</article>   {/* the slow header/body stream INSIDE, with their own reveal */}
+      <article>{children}</article>
     </ViewTransition>
   );
 }
 ```
+
+The slow header/body stream **inside** `{children}` with their own reveal; the layout only needs `params` (fast), so the morph target is in the shell at navigation time.
 
 The morph target exists in the shell the moment you navigate (it only needs `slug` from the URL), so it pairs with the list-side card and morphs immediately; the data fills in after. If the shared element is a *visual* (album art, product image) rather than the whole container, back it with a **fast, cached, param-only** query (e.g. just the cover color/URL) and keep the heavy per-entity fetch behind the inner `<Suspense>`.
 

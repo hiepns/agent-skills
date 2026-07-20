@@ -241,20 +241,6 @@ Same freeze as persistent chrome. A floating/interactive element left rendered w
 }
 ```
 
-### Skeleton ↔ Content Morph (group-only)
-
-For an element that appears in **both** a Suspense fallback and the resolved content (search input, title, a solid bar), share one `view-transition-name` across both and animate only the **group** (position/size) — disable the old/new cross-fade so text/solid shapes don't ghost:
-
-```css
-::view-transition-group(search-input) {
-  animation-duration: var(--duration-move);
-}
-::view-transition-old(search-input),
-::view-transition-new(search-input) {
-  animation: none;
-}
-```
-
 ### Sliding Indicator (tab underline / segmented pill)
 
 One shared-name indicator morphs between positions. Slide the group; disable old/new so the solid bar slides instead of cross-fading:

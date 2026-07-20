@@ -125,7 +125,7 @@ This example uses `slide-down` / `slide-up` for directional vertical motion. For
 **Rules:**
 - Always use `default="none"` on the content `<ViewTransition>` to prevent re-animation on revalidation or unrelated transitions.
 - Use simple string props (not type maps) on Suspense `<ViewTransition>`s — Suspense resolves fire as separate transitions with no type, so type-keyed props won't match.
-- If the same element appears in **both** the fallback and the content (a title, a search input, a control bar), it will flicker unless you morph it — give both the same `view-transition-name`. This only morphs when the content resolves within the same reveal (cached/prefetched); on a cold fetch it enters later as a separate transition. See "Shared Controls / Text Between Skeleton and Content" in `patterns.md` and the "Skeleton ↔ Content Morph" recipe in `css-recipes.md`.
+- If the same element appears in **both** the fallback and the content (a title, a heading), it flickers on reveal — an opacity dip. Render it **outside** the `<Suspense>` boundary (or pin it), so it isn't in both. See "Suspense reveal flicker" in `patterns.md`.
 
 ## Step 6: Add Shared Element Transitions
 

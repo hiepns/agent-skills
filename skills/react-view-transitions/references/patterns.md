@@ -116,7 +116,7 @@ Use `key` when content identity changes (state resets). Omit for cross-fades (ta
 
 The only way to pull an element out of the browser's animated `root` snapshot is to give it **its own `view-transition-name`**. There is no "exclude from root" primitive.
 
-> **`view-transition-name: none` does NOT isolate anything.** `none` is the CSS *default* — setting it explicitly is a no-op, and the element stays part of the `root` capture. This is a common bug (e.g. a popover with `style={{ viewTransitionName: 'none' }}` still flickers). Isolation always requires a **real, unique name** plus CSS that neutralizes its animation.
+> **`view-transition-name: none` does NOT isolate anything.** `none` is the CSS *default* — setting it explicitly is a no-op, and the element stays part of the `root` capture. This is a common bug (e.g. a popover with `style={{ viewTransitionName: 'none' }}` still flickers). Isolation always requires a **real, unique name**; you then neutralize its animation either with `<ViewTransition default="none">` (no CSS) or with CSS pseudo-element rules (needed when you also want `z-index`/`display` control — see below).
 
 ### Persistent Layout Elements
 
@@ -142,22 +142,20 @@ Then freeze it — see "Floating Element Isolation" in `css-recipes.md`.
 
 A static name is safe as long as only one instance is mounted at a time (e.g. the menu uses `unmountOnHide`). If genuinely rendered in the browser **top layer** (native `popover`/`<dialog>`), the settle re-composite is a browser limitation React can't reach — but most portaled popovers are ordinary divs and the real-name fix resolves the flicker.
 
-## Shared Controls / Text Between Skeleton and Content (fixing the reveal flicker)
+## Suspense reveal flicker: an element shared between fallback and content
 
-**Why an element that appears in *both* the fallback and the resolved content flickers:** they're two different DOM nodes across the Suspense swap. Without a shared name the browser snapshots them separately and **cross-fades** (old fades out while new fades in) — with text or a solid bar of different size/content, that reads as a ghost/flicker. It is **not** a "pin it" problem — pinning (isolation) freezes the element; here you *want* continuity.
+If the **same** element (a title, a heading, a toolbar) is rendered in **both** the Suspense fallback and the resolved content, it briefly **flickers** on reveal — an opacity dip. The reveal cross-fades the fallback out and the content in, and the duplicated element fades against itself. This is a within-page opacity flicker, **not** a shape morph.
 
-**Fix: morph the fallback shape into the content shape.** Give the matching element in fallback and content the **same `view-transition-name`**, and — critically for text/solid shapes — animate only the **group** (position/size) while disabling the old/new cross-fade:
+**Fix (preferred): move it outside the Suspense boundary.** Render the persistent element *above* `<Suspense>` so it mounts once and never takes part in the fallback→content swap:
 
 ```jsx
-// Fallback
-<input disabled placeholder="Search..." style={{ viewTransitionName: 'search-input' }} />
-// Content
-<input placeholder="Search..." style={{ viewTransitionName: 'search-input' }} />
+<h1>{title}</h1>
+<Suspense fallback={<BodySkeleton />}>
+  <Body />
+</Suspense>
 ```
 
-Then morph it — see "Skeleton ↔ Content Morph (group-only)" in `css-recipes.md`.
-
-So yes — you *can* morph the fallback shape into the content shape: sharing one name across both is what makes it morph instead of flicker. **It only actually morphs when the content is present within the same reveal transition** — i.e. the data is cached/prefetched so the resolved element renders in the same transition that removes the fallback. On a cold/uncached fetch there is no content element yet at the reveal, so nothing pairs with the fallback: you sit on the skeleton and the content enters later as a *separate* transition (a plain enter, no morph). Blanket-avoiding it ("never put the same element in both") works but forfeits the nicest reveal.
+**Alternative: pin it** — give it its own `view-transition-name` (isolation, above) so it's excluded from the reveal animation. Moving it out is simpler. If a control genuinely *changes* between fallback and content and must stay inside (e.g. a disabled → enabled search input), giving both the same `view-transition-name` keeps it continuous instead of flickering.
 
 Don't put manual `viewTransitionName` on the root DOM node inside `<ViewTransition>` — React's auto-generated name overrides it.
 
@@ -167,6 +165,7 @@ A single active-indicator (underline, pill) that **slides** to the selected tab 
 
 ```tsx
 'use client';
+import Link from 'next/link';
 import { useOptimistic, useTransition, ViewTransition } from 'react';
 
 export function Tabs({ tabs, active, indicatorName = 'tab-indicator' }) {
@@ -290,7 +289,7 @@ The `types` array (second argument) lets you vary animation based on transition 
 
 **"Two ViewTransition components with the same name":** Names must be globally unique. Use IDs: `name={`hero-${item.id}`}`.
 
-**Scrolling hangs / feels stuck while a transition animates (esp. a Suspense reveal):** the browser's `::view-transition` overlay is `position: fixed` over the viewport, and the old/new snapshots don't scroll with the page — so scrolling appears frozen until the animation settles. This is a **browser/CSS View Transitions limitation**, not something React can hide (skipping the transition on scroll snaps abruptly to the end). Mitigate by keeping reveal durations short (200–400ms). For genuinely scroll-driven UI, use **gesture transitions** (`useSwipeTransition` / `startGestureTransition`) — those are scrubbed by scroll position so scrolling *drives* the transition instead of fighting it.
+**Scrolling hangs / feels stuck while a transition animates (esp. a Suspense reveal):** the browser's `::view-transition` overlay is `position: fixed` over the viewport, and the old/new snapshots don't scroll with the page — so scrolling appears frozen until the animation settles. This is a **browser/CSS View Transitions limitation**, not something React can hide (skipping the transition on scroll snaps abruptly to the end). Mitigate by keeping reveal durations short (200–400ms). For genuinely scroll-driven UI, gesture transitions (the experimental `useSwipeTransition` / `startGestureTransition`, if available in your React build) are scrubbed by scroll position so scrolling *drives* the transition instead of fighting it.
 
 **Open popover/menu flickers when a background transition settles:** the floating element is captured in the `root` snapshot. Give it a real `view-transition-name` + isolation CSS — see "Floating Elements" above. (`viewTransitionName: 'none'` does not fix it — that's the CSS default.)
 
