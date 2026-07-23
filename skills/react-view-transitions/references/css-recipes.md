@@ -218,6 +218,23 @@ Trade-offs: clicks can hit live elements under still-moving snapshots, and it on
 
 ---
 
+## No Root Cross-Fade (Live Root)
+
+The root cross-fades on every transition, freezing unnamed content behind a stale snapshot — hover and active styles stop rendering until it settles. `::view-transition-new(root)` is a **live** capture, so disabling the root animation keeps unnamed regions rendering (and, with the `pointer-events` recipe above, interactive):
+
+```css
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+```
+
+Named and classed groups still animate — they stack above root. Trade-off: unnamed content swaps instantly, so regions that should fade need their own VT. This also removes the main reason to hand-name static chrome; keep names only for elements that must stack above animating groups.
+
+---
+
 ## Persistent Element Isolation
 
 ```css
@@ -226,6 +243,8 @@ Trade-offs: clicks can hit live elements under still-moving snapshots, and it on
   z-index: 100;
 }
 ```
+
+Layer multiple pinned groups with z-index tiers — chrome at `100`, toasts/overlays that must beat everything at `200`.
 
 ### Backdrop-Blur Workaround
 
