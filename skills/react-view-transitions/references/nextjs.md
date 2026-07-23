@@ -12,7 +12,9 @@ const nextConfig = {
 module.exports = nextConfig;
 ```
 
-Historically this switched the bundled React to the experimental channel; in current Next.js (16.2+) it gates nothing at runtime, but set it anyway to match the documented setup. Because every link click is a transition, any VT with `default="auto"` fires on **every** navigation — use `default="none"` to prevent competing animations.
+The official docs instruct setting this flag; keep it. Historically it switched the bundled React to the **experimental channel** — required back when `ViewTransition` was experimental-only — but since React released `ViewTransition` to canary (Oct 2025), the canary React that App Router bundles has full support and the flag no longer switches channels. Today the experimental channel is selected by *other* flags (`gestureTransition`, `blockingSSR`, `taint`, `transitionIndicator`), and only experimental-channel features need it: gesture transitions (`useSwipeTransition`) and `parentEnter`/`parentExit`.
+
+Because every link click is a transition, any VT with `default="auto"` fires on **every** navigation — use `default="none"` to prevent competing animations.
 
 Do **not** install `react@canary` — see SKILL.md "Availability" for details.
 
@@ -211,7 +213,7 @@ When navigating between dynamic segments of the same route (e.g., `/collection/[
 
 ## Nested enter/exit — `parentEnter` / `parentExit` (experimental)
 
-Lifts the "nested VTs don't fire enter/exit inside a parent" rule: a nested VT can animate when its **parent** enters/exits (`parentEnter`/`parentExit`, `onParentEnter`/`onParentExit`; `parentEnter="none"` stops propagation). Experimental-channel only today (behind `enableViewTransitionParentEnterExit = __EXPERIMENTAL__`); SSR support for Suspense reveals landed in React PR #36917 ([commit](https://github.com/facebook/react/commit/83840902c890f0eb85decda239ef6b1b14945779)). Verify it's in the React your app actually runs: `grep -c "parentEnter" node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js` — 0 means unavailable (Next only uses the experimental channel when flags like `blockingSSR`/`taint` are set).
+Lifts the "nested VTs don't fire enter/exit inside a parent" rule: a nested VT can animate when its **parent** enters/exits (`parentEnter`/`parentExit`, `onParentEnter`/`onParentExit`; `parentEnter="none"` stops propagation). Experimental-channel only today (behind `enableViewTransitionParentEnterExit = __EXPERIMENTAL__`); SSR support for Suspense reveals landed in React PR #36917 ([commit](https://github.com/facebook/react/commit/83840902c890f0eb85decda239ef6b1b14945779)). Verify it's in the React your app actually runs: `grep -c "parentEnter" node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js` — 0 means unavailable (Next only uses the experimental channel when a flag from `needs-experimental-react.ts` is set: `gestureTransition`, `blockingSSR`, `taint`, or `transitionIndicator`).
 
 ## Server Components
 

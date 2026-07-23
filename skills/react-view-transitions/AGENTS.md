@@ -252,7 +252,7 @@ export function DirectionalTransition({ children }: { children: React.ReactNode 
 
 ### `router.back()` and Browser Back Button
 
-`router.back()` and the browser's back/forward buttons do **not** animate: React renders transitions scheduled during a `popstate` event synchronously (`shouldAttemptEagerTransition`) to keep back/forward instant, and synchronous renders skip view transitions. Traversals also carry no transition types, so type-keyed maps resolve to their `default`. Use `router.push()` with an explicit URL instead.
+`router.back()` and the browser's back/forward buttons carry **no transition types**, so type-keyed animations (directional slides) resolve to their `default` and don't play. Untyped animations — shared-element morphs with matching `name`s, bare/`auto` VTs — can still run. (React may also render `popstate`-scheduled transitions eagerly/synchronously to keep back/forward instant, skipping transitions in some cases.) For a fully animated back affordance, use `router.push()` with an explicit URL.
 
 ### Types and Suspense
 
@@ -571,7 +571,7 @@ If any path produces no animation or competing animations, revisit the relevant 
 - **Raw `viewTransitionName` CSS to trigger animations** — React only calls `document.startViewTransition` when `<ViewTransition>` components are in the tree. A bare `viewTransitionName` style is for isolating elements from a parent's snapshot, not for triggering animations.
 - **`update` trigger for same-route navigations** — nested VTs inside the content steal the mutation from the parent, so `update` never fires on the outer VT. Use `key` + `name` + `share` instead.
 - **Named VT in a reusable component** — if a component with a named VT is rendered in both a modal/popover *and* a page, both mount simultaneously and break the morph. Make the name conditional or move it to the specific consumer.
-- **`router.back()` for back navigation** — React renders `popstate`-scheduled transitions synchronously (skipping view transitions), and traversals carry no transition types. Use `router.push()` with an explicit URL.
+- **`router.back()` for back navigation** — traversals carry no transition types, so type-keyed animations don't play (untyped morphs still can). Use `router.push()` with an explicit URL for a fully animated back affordance.
 
 ---
 
@@ -868,7 +868,7 @@ The `types` array (second argument) lets you vary animation based on transition 
 
 **Section below a list teleports instead of gliding:** it's outside any activated boundary, its VT has `default="none"` (which disables `update`), or it isn't an immediate sibling of the changing content. See "Layout Displacement Morph" above.
 
-**`router.back()` and browser back/forward skip animation:** React renders `popstate`-scheduled transitions synchronously (skipping view transitions), and traversals carry no transition types. Use `router.push()` with an explicit URL instead. See SKILL.md "router.back() and Browser Back Button."
+**`router.back()` and browser back/forward skip the directional slide:** traversals carry no transition types, so type-keyed maps resolve to `default` — untyped shared-element morphs still apply. Use `router.push()` with an explicit URL for typed animations. See SKILL.md "router.back() and Browser Back Button."
 
 **`flushSync` skips animations:** Use `startTransition` instead.
 
@@ -1196,7 +1196,9 @@ const nextConfig = {
 module.exports = nextConfig;
 ```
 
-Historically this switched the bundled React to the experimental channel; in current Next.js (16.2+) it gates nothing at runtime, but set it anyway to match the documented setup. Because every link click is a transition, any VT with `default="auto"` fires on **every** navigation — use `default="none"` to prevent competing animations.
+The official docs instruct setting this flag; keep it. Historically it switched the bundled React to the **experimental channel** — required back when `ViewTransition` was experimental-only — but since React released `ViewTransition` to canary (Oct 2025), the canary React that App Router bundles has full support and the flag no longer switches channels. Today the experimental channel is selected by *other* flags (`gestureTransition`, `blockingSSR`, `taint`, `transitionIndicator`), and only experimental-channel features need it: gesture transitions (`useSwipeTransition`) and `parentEnter`/`parentExit`.
+
+Because every link click is a transition, any VT with `default="auto"` fires on **every** navigation — use `default="none"` to prevent competing animations.
 
 Do **not** install `react@canary` — see "Availability" for details.
 
@@ -1395,7 +1397,7 @@ When navigating between dynamic segments of the same route (e.g., `/collection/[
 
 ## Nested enter/exit — `parentEnter` / `parentExit` (experimental)
 
-Lifts the "nested VTs don't fire enter/exit inside a parent" rule: a nested VT can animate when its **parent** enters/exits (`parentEnter`/`parentExit`, `onParentEnter`/`onParentExit`; `parentEnter="none"` stops propagation). Experimental-channel only today (behind `enableViewTransitionParentEnterExit = __EXPERIMENTAL__`); SSR support for Suspense reveals landed in React PR #36917 ([commit](https://github.com/facebook/react/commit/83840902c890f0eb85decda239ef6b1b14945779)). Verify it's in the React your app actually runs: `grep -c "parentEnter" node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js` — 0 means unavailable (Next only uses the experimental channel when flags like `blockingSSR`/`taint` are set).
+Lifts the "nested VTs don't fire enter/exit inside a parent" rule: a nested VT can animate when its **parent** enters/exits (`parentEnter`/`parentExit`, `onParentEnter`/`onParentExit`; `parentEnter="none"` stops propagation). Experimental-channel only today (behind `enableViewTransitionParentEnterExit = __EXPERIMENTAL__`); SSR support for Suspense reveals landed in React PR #36917 ([commit](https://github.com/facebook/react/commit/83840902c890f0eb85decda239ef6b1b14945779)). Verify it's in the React your app actually runs: `grep -c "parentEnter" node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js` — 0 means unavailable (Next only uses the experimental channel when a flag from `needs-experimental-react.ts` is set: `gestureTransition`, `blockingSSR`, `taint`, or `transitionIndicator`).
 
 ## Server Components
 

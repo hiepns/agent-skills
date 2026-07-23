@@ -287,7 +287,7 @@ The `types` array (second argument) lets you vary animation based on transition 
 
 **Section below a list teleports instead of gliding:** it's outside any activated boundary, its VT has `default="none"` (which disables `update`), or it isn't an immediate sibling of the changing content. See "Layout Displacement Morph" above.
 
-**`router.back()` and browser back/forward skip animation:** React renders `popstate`-scheduled transitions synchronously (skipping view transitions), and traversals carry no transition types. Use `router.push()` with an explicit URL instead. See SKILL.md "router.back() and Browser Back Button."
+**`router.back()` and browser back/forward skip the directional slide:** traversals carry no transition types, so type-keyed maps resolve to `default` — untyped shared-element morphs still apply. Use `router.push()` with an explicit URL for typed animations. See SKILL.md "router.back() and Browser Back Button."
 
 **`flushSync` skips animations:** Use `startTransition` instead.
 

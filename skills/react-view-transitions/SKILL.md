@@ -177,7 +177,7 @@ export function DirectionalTransition({ children }: { children: React.ReactNode 
 
 ### `router.back()` and Browser Back Button
 
-`router.back()` and the browser's back/forward buttons do **not** animate: React renders transitions scheduled during a `popstate` event synchronously (`shouldAttemptEagerTransition`) to keep back/forward instant, and synchronous renders skip view transitions. Traversals also carry no transition types, so type-keyed maps resolve to their `default`. Use `router.push()` with an explicit URL instead.
+`router.back()` and the browser's back/forward buttons carry **no transition types**, so type-keyed animations (directional slides) resolve to their `default` and don't play. Untyped animations — shared-element morphs with matching `name`s, bare/`auto` VTs — can still run. (React may also render `popstate`-scheduled transitions eagerly/synchronously to keep back/forward instant, skipping transitions in some cases.) For a fully animated back affordance, use `router.push()` with an explicit URL.
 
 ### Types and Suspense
 
