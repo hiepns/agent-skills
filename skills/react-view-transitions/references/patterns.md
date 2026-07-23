@@ -118,6 +118,7 @@ Pull an element out of the animated `root` snapshot by giving it its own `view-t
 
 - **Persistent chrome** (nav, sidebar, player bar): `<nav style={{ viewTransitionName: 'persistent-nav' }}>` + isolation CSS. `<ViewTransition default="none">` works too, but its auto-name can't take `z-index`/backdrop `display:none` — hand-name when you need those.
 - **Floating elements** (popovers, menus): left open, they're captured in `root` and flicker on settle. Real name + isolation (`css-recipes.md` → Floating Element Isolation). A static name is fine if only one is mounted (`unmountOnHide`); native top-layer (`popover`/`<dialog>`) settle-flicker is a browser limit.
+- **Naming an interactive element has a cost:** named participants are skipped by hit-testing while a transition runs — hover, cursor, and clicks fall through to whatever is beneath for the transition's duration (spec behavior; [csswg#10930](https://github.com/w3c/csswg-drafts/issues/10930)). Always **portal** a named popover/menu so those fallback hits stay inside its own subtree: rendered inline in a clickable row, mid-transition clicks hover/activate the row behind it, and outside-click detection closes the popover.
 
 ## Suspense reveal flicker
 
@@ -260,6 +261,12 @@ The `types` array (second argument) lets you vary animation based on transition 
 **Scrolling hangs while a transition animates:** the `::view-transition` overlay is `position: fixed` and its snapshots don't scroll — a browser limitation, not fixable in React (skipping snaps to the end). Keep reveal durations short; for scroll-driven UI use gesture transitions (experimental `useSwipeTransition`, if available).
 
 **Open popover flickers when a background transition settles:** it's captured in `root`. Give it a real `view-transition-name` + isolation (not `none`) — see "Floating Elements".
+
+**Popover closes or goes dead when clicked mid-transition:** named participants are skipped by hit-testing while a transition runs; clicks land on what's beneath and read as outside-clicks. Portal the popover (see "Isolate Elements from Parent Animations"); brief dead clicks during the transition remain — that's the price of the name.
+
+**Shared morph silently not firing:** `share` resolved to `none`. Either the VT has `default="none"` with no explicit `share` prop, or `share` is type-keyed and the navigation never adds the type — the link needs `transitionTypes` (or `addTransitionType` in the transition).
+
+**Section below a list teleports instead of gliding:** it's outside any activated boundary, or its VT has `default="none"` (which disables `update`). Wrap the section in a bare `<ViewTransition>` — see SKILL.md → Layout Displacement Morph.
 
 **`router.back()` and browser back/forward skip animation:** Use `router.push()` with an explicit URL instead. See SKILL.md "router.back() and Browser Back Button."
 

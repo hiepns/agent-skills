@@ -182,6 +182,8 @@ Same rules as explicit `<Suspense>`: use simple string props (not type maps) sin
 </ViewTransition>
 ```
 
+If the pair's `share` is type-keyed (or classed via CSS that expects a type), every `<Link>` between the two views must carry the type via `transitionTypes` — a plain link click resolves the share map's `default`, and if that's `none` the morph silently never fires.
+
 ---
 
 ## Same-Route Dynamic Segment Transitions

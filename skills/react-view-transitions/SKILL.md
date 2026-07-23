@@ -74,7 +74,7 @@ React auto-assigns a unique `view-transition-name` and calls `document.startView
 |---------|--------------|
 | **enter** | `<ViewTransition>` first inserted during a Transition |
 | **exit** | `<ViewTransition>` first removed during a Transition |
-| **update** | DOM mutations inside a `<ViewTransition>`. With nested VTs, mutation applies to the innermost one |
+| **update** | DOM mutations inside a `<ViewTransition>`, or the boundary itself moving/resizing because content around it changed. With nested VTs, mutation applies to the innermost one |
 | **share** | Named VT unmounts and another with same `name` mounts in the same Transition |
 
 Only `startTransition`, `useDeferredValue`, or `Suspense` activate VTs. Regular `setState` does not animate.
@@ -202,6 +202,7 @@ Same `name` on two VTs — one unmounting, one mounting — creates a shared ele
 
 - Only one VT with a given `name` can be mounted at a time — use unique names (`photo-${id}`). Watch for reusable components: if a component with a named VT is rendered in both a modal/popover *and* a page, both mount simultaneously and break the morph. Either make the name conditional (via a prop) or move the named VT out of the shared component into the specific consumer.
 - `share` takes precedence over `enter`/`exit`. Think through each navigation path: when no matching pair forms (e.g., the target page doesn't have the same name), `enter`/`exit` fires instead. Consider whether the element needs a fallback animation for those paths.
+- Two ways a wired-up morph silently never fires: (1) `default="none"` with no explicit `share` prop — share resolves to none; (2) type-keyed `share` where the navigation never adds the type — a plain link click resolves the map's `default`. Every link that should morph must add the type (`transitionTypes` on `next/link`, or `addTransitionType`).
 - Never use a fade-out exit on pages with shared morphs — use a directional slide instead.
 
 ---
@@ -225,6 +226,22 @@ Same `name` on two VTs — one unmounting, one mounting — creates a shared ele
 ```
 
 Trigger inside `startTransition`. Avoid wrapper `<div>`s between list and VT.
+
+### Layout Displacement Morph
+
+Only content inside an activated boundary animates position — everything else teleports to its new layout spot. When a list grows/shrinks, wrap the *sibling* content below it so it glides instead of jumping:
+
+```jsx
+<FavoritesList />              {/* rows enter/exit */}
+<ViewTransition>               {/* bare: update enabled */}
+  <section>
+    <h2>You Might Also Like</h2>
+    <Recommendations />
+  </section>
+</ViewTransition>
+```
+
+The section — heading included — morphs as one group when rows above are added or removed. `default="none"` disables exactly this: nothing inside the section changed, so the *displacement* is the update.
 
 ### Composing Shared Elements with List Identity
 
@@ -279,9 +296,11 @@ For more patterns, see `references/patterns.md`.
 
 Every VT matching the trigger fires simultaneously in a single `document.startViewTransition`. VTs in **different** transitions (navigation vs later Suspense resolve) don't compete.
 
-### Use `default="none"` Liberally
+### Use `default="none"` Deliberately
 
-Without it, every VT fires the browser cross-fade on **every** transition — Suspense resolves, `useDeferredValue` updates, background revalidations. Always use `default="none"` and explicitly enable only desired triggers.
+Without it, every VT fires the browser cross-fade on **every** transition — Suspense resolves, `useDeferredValue` updates, background revalidations. Use `default="none"` on named/shared elements and type-keyed page VTs.
+
+But know what it turns off: `default="none"` also disables `update` (layout displacement morphs — list reflow, sections gliding when content above changes) and `share` (a named pair with `default="none"` and no explicit `share` prop silently never morphs). Keyed list items and displaced siblings *want* update — leave them bare or set `update="auto"` explicitly.
 
 ### Two Patterns Coexist
 

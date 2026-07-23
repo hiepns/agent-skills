@@ -204,6 +204,20 @@ Usage: `<ViewTransition enter="scale-in" exit="scale-out" />`
 
 ---
 
+## Interactivity During Transitions
+
+The `::view-transition` overlay covers the viewport and blocks all interaction by default. Let clicks and hover pass through to the live page:
+
+```css
+::view-transition {
+  pointer-events: none;
+}
+```
+
+This only restores interactivity for **unnamed** content. Elements participating in the transition (anything with a `view-transition-name`) are skipped by hit-testing for the transition's duration — spec behavior, no CSS override ([csswg#10930](https://github.com/w3c/csswg-drafts/issues/10930)). Weigh that cost before naming interactive elements, and portal named popovers (see `patterns.md` → Isolate Elements from Parent Animations).
+
+---
+
 ## Persistent Element Isolation
 
 ```css
